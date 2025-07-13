@@ -29,26 +29,68 @@
 //   console.timeEnd('writeMany')
 // })()
 
-const fs = require('node:fs/promises')
+const fs = require("node:fs/promises");
 // Execution time: 20s
 // CPU usage: 100%
 // Memory usage: 45MB
-;(async () => {
-  console.time('writeMany')
-  const fileHandle = await fs.open('test.txt', 'w')
-  const stream = fileHandle.createWriteStream()
+(async () => {
+  console.time("writeMany");
+  const fileHandle = await fs.open("test.txt", "w");
+  const stream = fileHandle.createWriteStream();
 
-  console.log(stream.writableHighWaterMark)
-  console.log(stream.writableLength)
-  const buff = Buffer.from('string')
-  stream.write(buff)
-  stream.write(buff)
-  console.log(stream.writableLength)
-  console.log(buff)
+  // console.log(stream.writableHighWaterMark);
 
-  // for (let i = 0; i < 1000000; i++) {
-  //   const buff = Buffer.from(` ${i} `, 'utf-8')
-  //   stream.write(buff)
-  // }
-  console.timeEnd('writeMany')
-})()
+  // 8 bits = 1 byte
+  // 1000 bytes = 1 kilobyte
+  // 1000 kilobytes = 1 megabyte
+
+  // 1a => 0001 1010
+
+  // const buff = Buffer.alloc(65535, "a");
+  // console.log(stream.write(buff));
+  // console.log(stream.write(Buffer.alloc(1, "a")));
+  // console.log(stream.write(Buffer.alloc(1, "a")));
+  // console.log(stream.write(Buffer.alloc(1, "a")));
+
+  // console.log(stream.writableLength);
+
+  // stream.on("drain", () => {
+  //   console.log(stream.write(Buffer.alloc(1, "a")));
+  //   console.log(stream.writableLength);
+  //   console.log("We are now safe to write more!");
+  // });
+
+  // setInterval(() => {}, 1000);
+  let i = 0;
+  const writeMany = () => {
+    while (i < 1000000) {
+      const buff = Buffer.from(` ${i} `, "utf-8");
+
+      // this is our last write
+      if (i === 999999) {
+        return stream.end(buff);
+      }
+
+      i++;
+      if (!stream.write(buff)) {
+        break;
+      }
+    }
+  };
+
+  writeMany();
+
+  // resume our loop once our stream's internal buffer is emptied
+  stream.on("drain", () => {
+    console.log("Drained!");
+    writeMany();
+  });
+
+  stream.on("finish", () => {
+    console.timeEnd("writeMany");
+    fileHandle.close();
+  });
+
+  // console.timeEnd("writeMany");
+  // fileHandle.close();
+})();
